@@ -1,0 +1,62 @@
+
+# Load the full df that already has clusters
+import pandas as pd
+
+df = pd.read_csv('customer_segments_share_based.csv')
+
+print(f"Loaded df with {len(df):,} rows and columns: {list(df.columns)}")
+
+import os
+os.getcwd()
+
+import pandas as pd
+
+old_sampled = pd.read_csv('sampled_customers.csv')
+
+old_ids = set(old_sampled['customer_request_id'])
+
+print(f"Old sampled customers: {len(old_ids):,}")
+
+# -------------------------------------
+# 10. Remove previously sampled customers
+# -------------------------------------
+df_new = df[~df['customer_request_id'].isin(old_ids)].copy()
+
+print(f"Total NEW eligible customers: {len(df_new):,}")
+
+df_new = df_new[df_new['cluster'] == 7].copy()
+print(f"Eligible NEW Van customers: {len(df_new):,}")
+
+RANDOM_SEED = 42
+
+df_new = df_new.sample(frac=1, random_state=RANDOM_SEED).reset_index(drop=True)
+
+N_PER_GROUP = 100_000
+
+if len(df_new) < 2 * N_PER_GROUP:
+    raise ValueError("❌ Not enough eligible users for test + control sampling")
+
+test_df = df_new.iloc[:N_PER_GROUP].copy()
+control_df = df_new.iloc[N_PER_GROUP: 2 * N_PER_GROUP].copy()
+
+test_df['group'] = 'test'
+control_df['group'] = 'control'
+
+print(f"Test size: {len(test_df):,}")
+print(f"Control size: {len(control_df):,}")
+
+final_sample = pd.concat([test_df, control_df], ignore_index=True)
+
+final_sample = final_sample[
+    ['customer_request_id', 'cluster', 'group']
+]
+
+print("\nFinal sample preview:")
+print(final_sample.head())
+
+final_sample.to_csv(
+    'new_sampled_customers_test_control.csv',
+    index=False
+)
+
+print("✅ Final sampling file saved successfully.")
