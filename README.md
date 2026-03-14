@@ -5,11 +5,19 @@ Customer Segmentation Based on Delivery Mode Usage
 
 This project analyzes user behavior in a **multi-modal delivery platform**.
 
-Think of an app where users can request different types of delivery services depending on their needs — for example:
-- Bike or motorbike for small and fast deliveries
-- Standard vans for medium-sized packages
-- Heavy vans or trucks for large or bulky items
-- Special vehicle types with specific configurations (e.g. floor, roof, box)
+Think of an app where users can request different types of mobility and logistics services depending on their needs.
+
+The main service categories used in this analysis are:
+**Car** (passenger ride)
+**Bike** (passenger ride)
+**Box** (small parcel delivery)
+**Van** (standard cargo)
+**Van – Floor** (flatbed)
+**Van – Roof** (covered cargo)
+**Truck** (heavy cargo)
+**Intercity** (long-distance transport)
+
+These categories represent the different transportation and logistics options available to users, and analyzing how customers distribute their requests across them allows us to identify meaningful behavioral segments.
 
 Users are free to choose different delivery modes over time, and their choices reflect **their real-world needs, habits, and constraints**.
 
@@ -41,14 +49,8 @@ This type of segmentation is useful for:
 
 ##  Data Scope & Filtering
 
-- **Time period:**  
-  1 year.
-
 - **Included:**  
   All completed delivery orders placed via the app during the analysis period.
-
-- **Excluded:**
-  - Business customers.
 
 - **Focus of this report:**  
   **Non-business (individual) customers**, who represent the majority of the user base and exhibit more diverse behavioral patterns.
@@ -86,37 +88,7 @@ This means every customer is represented by a **distribution vector** whose valu
 
 ---
 
-## 📊 Cluster Summary
-
-| Cluster | Dominant Usage Pattern | % of Users | % of Orders | Interpretation |
-|-------|------------------------|-----------|-------------|----------------|
-| 1 | BWB-dominant (~93%) | ~36% | ~52% | High-impact users with strong preference for one delivery mode |
-| 2 | Van-dominant (~89%) | ~44% | ~30% | Largest user group, consistent medium-sized delivery needs |
-| 3 | Bike + BWB mix | ~5% | ~7% | Hybrid users switching between lightweight and standard deliveries |
-| 4 | Heavy Van-dominant | ~5% | ~3% | Users with consistently large or heavy items |
-| 5 | PP-dominant | ~3.5% | ~5% | Distinct niche with specific delivery requirements |
-| 6 | Van with floor | ~1.4% | <1% | Very specialized vehicle configuration users |
-| 7 | VHM-dominant | <1% | <0.5% | Rare edge-case behavior |
-| 8 | Truck-dominant | <1% | <0.5% | Heavy logistics, low-frequency |
-| 9 | Carbox-dominant | ~1% | ~1% | Small, car-based delivery group |
-| 10 | Bike-only (~97%) | ~2.5% | ~1% | Lightweight, fast-delivery users |
-
----
-
-## 🔍 Key Insights
-
-- **Behavioral dominance matters more than headcount**  
-Some clusters generate a disproportionately large share of orders relative to their size.
-
-- **Most users are specialists, not generalists**  
-The majority strongly prefer a single delivery category rather than mixing many.
-
-- **Long tail of niche behaviors exists**  
-Small clusters represent operationally important but rare delivery needs.
-
----
-
-## 🛠 Tech Stack & Methods
+## Tech Stack & Methods
 
 - Python (Pandas, NumPy)
 - Scikit-learn (StandardScaler, KMeans)
@@ -125,7 +97,7 @@ Small clusters represent operationally important but rare delivery needs.
 
 ---
 
-## 🚀 Why This Project Matters
+## Why This Project Matters
 
 This project demonstrates how:
 - Raw transactional data can be transformed into **behavioral signals**
@@ -136,7 +108,7 @@ It is designed as a **portfolio-grade example** of customer segmentation in a re
 
 ---
 
-## 📌 Disclaimer
+## Disclaimer
 
 This repository is for **educational and demonstrational purposes only**.  
 All data structures, metrics, and results have been anonymized and abstracted to avoid disclosure of proprietary or sensitive information.
