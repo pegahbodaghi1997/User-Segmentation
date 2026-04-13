@@ -1,62 +1,135 @@
-
-# Load the full df that already has clusters
+import numpy as np
 import pandas as pd
 
-df = pd.read_csv('customer_segments_share_based.csv')
 
-print(f"Loaded df with {len(df):,} rows and columns: {list(df.columns)}")
+# --------------------------------------------------
+# 1. Calculate sample size (global)
+# --------------------------------------------------
+def calculate_sample_size(confidence=0.95, margin_of_error=0.05):
+    """
+    Calculate required sample size using standard formula
+    """
+    from scipy.stats import norm
 
-import os
-os.getcwd()
+    p = 0.5
+    z = norm.ppf((1 + confidence) / 2)
 
-import pandas as pd
+    n = (z**2 * p * (1 - p)) / (margin_of_error**2)
+    return int(np.ceil(n))
 
-old_sampled = pd.read_csv('sampled_customers.csv')
 
-old_ids = set(old_sampled['customer_request_id'])
+# --------------------------------------------------
+# 2. Cluster-based sampling
+# --------------------------------------------------
+def cluster_sampling(df, cluster_col, n_per_cluster):
+    """
+    Sample equal number of users from each cluster
+    """
+    samples = []
 
-print(f"Old sampled customers: {len(old_ids):,}")
+    for cluster in df[cluster_col].unique():
+        cluster_data = df[df[cluster_col] == cluster]
 
-# -------------------------------------
-# 10. Remove previously sampled customers
-# -------------------------------------
-df_new = df[~df['customer_request_id'].isin(old_ids)].copy()
+        n = min(n_per_cluster, len(cluster_data))  # avoid errors
 
-print(f"Total NEW eligible customers: {len(df_new):,}")
+        sample = cluster_data.sample(n=n, random_state=42)
+        samples.append(sample)
 
-df_new = df_new[df_new['cluster'] == 7].copy()
-print(f"Eligible NEW Van customers: {len(df_new):,}")
+    return pd.concat(samples)
 
-RANDOM_SEED = 42
 
-df_new = df_new.sample(frac=1, random_state=RANDOM_SEED).reset_index(drop=True)
+# --------------------------------------------------
+# 3. Random sampling (baseline)
+# --------------------------------------------------
+def random_sampling(df, total_n):
+    """
+    Simple random sampling
+    """
+    return df.sample(n=total_n, random_state=42)
 
-N_PER_GROUP = 100_000
 
-if len(df_new) < 2 * N_PER_GROUP:
-    raise ValueError("❌ Not enough eligible users for test + control sampling")
+# --------------------------------------------------
+# 4. Evaluate sampling quality
+# --------------------------------------------------
+def evaluate_sampling(population, sample, features):
+    """
+    Compare sample vs population using mean difference
+    """
+    results = []
 
-test_df = df_new.iloc[:N_PER_GROUP].copy()
-control_df = df_new.iloc[N_PER_GROUP: 2 * N_PER_GROUP].copy()
+    for feature in features:
+        pop_mean = population[feature].mean()
+        sample_mean = sample[feature].mean()
 
-test_df['group'] = 'test'
-control_df['group'] = 'control'
+        bias = abs(sample_mean - pop_mean)
 
-print(f"Test size: {len(test_df):,}")
-print(f"Control size: {len(control_df):,}")
+        results.append({
+            "feature": feature,
+            "population_mean": pop_mean,
+            "sample_mean": sample_mean,
+            "absolute_bias": bias
+        })
 
-final_sample = pd.concat([test_df, control_df], ignore_index=True)
+    return pd.DataFrame(results)
 
-final_sample = final_sample[
-    ['customer_request_id', 'cluster', 'group']
-]
 
-print("\nFinal sample preview:")
-print(final_sample.head())
+# --------------------------------------------------
+# 5. Compare two sampling methods
+# --------------------------------------------------
+def compare_sampling_methods(df, cluster_col, features):
+    """
+    Compare cluster-based vs random sampling
+    """
 
-final_sample.to_csv(
-    'new_sampled_customers_test_control.csv',
-    index=False
-)
+    # Sample size
+    n_total = calculate_sample_size()
 
-print("✅ Final sampling file saved successfully.")
+    n_clusters = df[cluster_col].nunique()
+    n_per_cluster = int(np.ceil(n_total / n_clusters))
+
+    # Sampling
+    cluster_sample = cluster_sampling(df, cluster_col, n_per_cluster)
+    random_sample = random_sampling(df, len(cluster_sample))
+
+    # Evaluation
+    cluster_eval = evaluate_sampling(df, cluster_sample, features)
+    random_eval = evaluate_sampling(df, random_sample, features)
+
+    # Add labels
+    cluster_eval["method"] = "cluster_sampling"
+    random_eval["method"] = "random_sampling"
+
+    return pd.concat([cluster_eval, random_eval])
+
+
+# --------------------------------------------------
+# 6. Example usage
+# --------------------------------------------------
+if __name__ == "__main__":
+
+    # Example: assume df already has cluster column
+    df = pd.read_csv("clustered_data.csv")
+
+    features = [
+        'car', 'bike', 'box',
+        'van', 'van-floor', 'van-roof',
+        'truck', 'intercity'
+    ]
+
+    results = compare_sampling_methods(df, "cluster", features)
+
+    print("\nSampling Comparison Results:")
+    print(results)
+
+    # Aggregate comparison
+    summary = results.groupby("method")["absolute_bias"].mean()
+
+    print("\nAverage Bias by Method:")
+    print(summary)
+
+    improvement = (
+        (summary["random_sampling"] - summary["cluster_sampling"])
+        / summary["random_sampling"]
+    ) * 100
+
+    print(f"\nBias Reduction with Cluster Sampling: {improvement:.2f}%")
